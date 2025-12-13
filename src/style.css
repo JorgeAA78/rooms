@@ -1,0 +1,155 @@
+:root {
+  --primary-color: #FF6B6B;
+  --secondary-color: #4ECDC4;
+  --text-color: #2C3E50;
+  --bg-color: #F7F7F7;
+  --input-border: #000;
+  --button-text: #FFF;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.root {
+  width: 100%;
+  max-width: 400px;
+  background: white;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+.header {
+  background-color: var(--primary-color);
+  height: 60px;
+  width: 100%;
+}
+
+.container {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.title {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 30px;
+}
+
+.label {
+  font-size: 18px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 20px;
+  border: 2px solid var(--input-border);
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 20px;
+  border: 2px solid var(--input-border);
+  border-radius: 4px;
+  font-size: 16px;
+  background: white;
+}
+
+.button {
+  width: 100%;
+  padding: 15px;
+  background-color: #9CB4CC; /* Light blue from design */
+  color: var(--text-color);
+  border: none;
+  border-radius: 4px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.button:hover {
+  background-color: #8aa3bb;
+}
+
+/* Chat Page Specifics */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat-header {
+  margin-bottom: 20px;
+}
+
+.chat-title {
+  font-size: 36px;
+  font-weight: bold;
+  margin: 0;
+}
+
+.room-id {
+  font-size: 18px;
+  color: #666;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.message {
+  padding: 10px;
+  border-radius: 4px;
+  max-width: 80%;
+}
+
+.message.my-message {
+  background-color: #B8E994; /* Light green */
+  align-self: flex-end;
+  text-align: right;
+}
+
+.message.other-message {
+  background-color: #E0E0E0;
+  align-self: flex-start;
+}
+
+.message-sender {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 2px;
+  display: block;
+}
+
+.chat-form {
+  display: flex;
+  flex-direction: column;
+}
