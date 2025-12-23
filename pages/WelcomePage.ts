@@ -41,9 +41,10 @@ export function initWelcomePage(container: Element) {
         }
     });
 
+    if (!button) return container;
     button.addEventListener("click", () => {
-        const email = (container.querySelector("input[name='email']") as HTMLInputElement).value;
-        const nombre = (container.querySelector("input[name='nombre']") as HTMLInputElement).value;
+        const email = (container.querySelector("input[name='email']") as HTMLInputElement).value.trim();
+        const nombre = (container.querySelector("input[name='nombre']") as HTMLInputElement).value.trim();
         const roomOption = roomSelect.value;
 
         if (email && nombre) {
@@ -56,7 +57,7 @@ export function initWelcomePage(container: Element) {
                         goTo("/chat", { room: newRoomId });
                     });
                 } else {
-                    const roomId = (container.querySelector("input[name='room-id']") as HTMLInputElement).value;
+                    const roomId = (container.querySelector("input[name='room-id']") as HTMLInputElement).value.trim();
                     if (roomId) {
                         state.setRoomId(roomId);
                         state.accessToRoom(() => {

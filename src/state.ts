@@ -31,7 +31,12 @@ const state = {
     // Check for local storage?
     const localData = localStorage.getItem("chat-state");
     if (localData) {
-      this.setState(JSON.parse(localData));
+      try {
+        this.setState(JSON.parse(localData));
+      } catch (e) {
+        console.error("Invalid chat-state in localStorage", e);
+        localStorage.removeItem("chat-state");
+      }
     }
   },
 
@@ -39,12 +44,20 @@ const state = {
     return this.data;
   },
 
-  setState(newState: StateData) {
-    this.data = newState;
+  setState(newState: Partial<StateData>) {
+    this.data = {
+      ...this.data,
+      ...newState,
+      messages: Array.isArray(newState.messages)
+        ? [...newState.messages]
+        : Array.isArray(this.data.messages)
+          ? [...this.data.messages]
+          : [],
+    };
     for (const cb of this.listeners) {
       cb();
     }
-    localStorage.setItem("chat-state", JSON.stringify(newState));
+    localStorage.setItem("chat-state", JSON.stringify(this.data));
     console.log("State changed", this.data);
   },
 
@@ -68,20 +81,17 @@ const state = {
 
   setFullName(name: string) {
     const cs = this.getState();
-    cs.fullName = name;
-    this.setState(cs);
+    this.setState({ ...cs, fullName: name });
   },
 
   setEmail(email: string) {
     const cs = this.getState();
-    cs.email = email;
-    this.setState(cs);
+    this.setState({ ...cs, email });
   },
 
   setRoomId(roomId: string) {
     const cs = this.getState();
-    cs.roomId = roomId;
-    this.setState(cs);
+    this.setState({ ...cs, roomId });
   },
 
   signIn(callback?: () => void) {
@@ -91,8 +101,9 @@ const state = {
       // For now, let's just generate a userId based on email or random if not exists
       // But actually, the requirements don't specify strict auth, just email/name.
       // We can store user info in RTDB /users if needed.
-      cs.userId = btoa(cs.email); // Simple ID
-      this.setState(cs);
+      const normalizedEmail = cs.email.trim().toLowerCase();
+      const userId = btoa(normalizedEmail);
+      this.setState({ ...cs, email: normalizedEmail, userId });
       if (callback) callback();
     } else {
       console.error("No email provided");
@@ -106,16 +117,18 @@ const state = {
       const newRoomRef = push(roomsRef);
       const newRoomId = newRoomRef.key;
 
-      cs.roomId = newRoomId || "";
-      this.setState(cs);
-
       // Initialize room with owner
       set(newRoomRef, {
         owner: cs.userId,
         messages: []
-      }).then(() => {
-        if (callback) callback();
-      });
+      })
+        .then(() => {
+          this.setState({ ...this.getState(), roomId: newRoomId || "" });
+          if (callback) callback();
+        })
+        .catch((e) => {
+          console.error("Failed to create room", e);
+        });
     } else {
       console.error("User not authenticated");
     }
@@ -127,6 +140,10 @@ const state = {
 
     const cs = this.getState();
     const roomId = cs.roomId;
+    if (!roomId) {
+      console.error("Missing roomId");
+      return;
+    }
     const roomRef = ref(rtdb, "/rooms/" + roomId);
     let isFirstCall = true;
 
@@ -134,8 +151,14 @@ const state = {
       const data = snapshot.val();
       if (data) {
         const currentState = this.getState();
-        currentState.messages = map(data.messages) as Message[];
-        this.setState(currentState);
+        const rawMessages = data.messages || [];
+        const nextMessages = (Array.isArray(rawMessages)
+          ? rawMessages
+          : (map(rawMessages) as Message[])
+        )
+          .filter((m) => m && typeof m.message === "string")
+          .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        this.setState({ ...currentState, messages: nextMessages });
         // Solo ejecutar callback la primera vez
         if (callback && isFirstCall) {
           isFirstCall = false;
@@ -149,8 +172,14 @@ const state = {
 
   pushMessage(message: string) {
     const cs = this.getState();
+    if (!cs.roomId) {
+      return Promise.reject(new Error("Missing roomId"));
+    }
+    if (!cs.fullName) {
+      return Promise.reject(new Error("Missing fullName"));
+    }
     const messagesRef = ref(rtdb, "/rooms/" + cs.roomId + "/messages");
-    push(messagesRef, {
+    return push(messagesRef, {
       from: cs.fullName,
       message: message,
       timestamp: Date.now() // Use server timestamp ideally

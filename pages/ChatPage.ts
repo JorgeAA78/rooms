@@ -39,10 +39,18 @@ export function initChatPage(container: Element) {
     const messagesContainer = container.querySelector(".messages");
     const form = container.querySelector(".chat-form");
 
+    const previousUnsubscribe = (container as any).__chatUnsubscribe as
+        | (() => void)
+        | undefined;
+    if (previousUnsubscribe) {
+        previousUnsubscribe();
+    }
+
     function renderMessages() {
         const currentState = state.getState();
         const messages = currentState.messages || [];
 
+        if (!messagesContainer) return;
         messagesContainer.innerHTML = "";
 
         messages.forEach(msg => {
@@ -63,25 +71,47 @@ export function initChatPage(container: Element) {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    state.subscribe(() => {
+    const unsubscribe = state.subscribe(() => {
         renderMessages();
     });
+    (container as any).__chatUnsubscribe = unsubscribe;
 
     // Initial render
     renderMessages();
     // Ensure we are listening to room updates
     state.accessToRoom();
 
-    form.addEventListener("submit", (e) => {
+    if (!form) return container;
+    form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const input = form.querySelector("input[name='message']") as HTMLInputElement;
-        const message = input.value;
+        const message = input?.value ?? "";
+        const trimmed = message.trim();
 
-        if (message) {
-            state.pushMessage(message);
-            input.value = "";
+        if (trimmed) {
+            try {
+                await state.pushMessage(trimmed);
+                input.value = "";
+            } catch (err) {
+                console.error("Failed to send message", err);
+            }
         }
     });
+
+    window.addEventListener(
+        "popstate",
+        () => {
+            const unsub = (container as any).__chatUnsubscribe as
+                | (() => void)
+                | undefined;
+            if (unsub) {
+                unsub();
+                (container as any).__chatUnsubscribe = undefined;
+            }
+            state.unsubscribeFromRoom();
+        },
+        { once: true }
+    );
 
     return container;
 }
