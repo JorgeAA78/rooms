@@ -1,5 +1,5 @@
 import { rtdb } from "./rtdb";
-import { ref, onValue, push, set, Unsubscribe } from "firebase/database";
+import { ref, onValue, Unsubscribe } from "firebase/database";
 import map from "lodash/map";
 
 interface Message {
@@ -113,17 +113,21 @@ const state = {
   askNewRoom(callback?: () => void) {
     const cs = this.getState();
     if (cs.userId) {
-      const roomsRef = ref(rtdb, "/rooms");
-      const newRoomRef = push(roomsRef);
-      const newRoomId = newRoomRef.key;
-
-      // Initialize room with owner
-      set(newRoomRef, {
-        owner: cs.userId,
-        messages: []
+      fetch("/api/rooms", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ owner: cs.userId }),
       })
-        .then(() => {
-          this.setState({ ...this.getState(), roomId: newRoomId || "" });
+        .then(async (res) => {
+          const data = await res.json().catch(() => null);
+          if (!res.ok) {
+            throw new Error((data && data.error) || "Failed to create room");
+          }
+          const newRoomId = data && data.roomId;
+          if (!newRoomId) {
+            throw new Error("Failed to create room");
+          }
+          this.setState({ ...this.getState(), roomId: newRoomId });
           if (callback) callback();
         })
         .catch((e) => {
@@ -178,11 +182,16 @@ const state = {
     if (!cs.fullName) {
       return Promise.reject(new Error("Missing fullName"));
     }
-    const messagesRef = ref(rtdb, "/rooms/" + cs.roomId + "/messages");
-    return push(messagesRef, {
-      from: cs.fullName,
-      message: message,
-      timestamp: Date.now() // Use server timestamp ideally
+    return fetch(`/api/rooms/${cs.roomId}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ from: cs.fullName, message }),
+    }).then(async (res) => {
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error((data && data.error) || "Failed to send message");
+      }
+      return data;
     });
   }
 };
